@@ -7,12 +7,14 @@ import { getConfig, setConfigValue } from './core/tools/config.js';
 import { getUsageStats } from './core/tools/usage.js';
 import { buildToolDefinitions, EXCLUDED_TOOLS, type ToolDefinition } from './core/tool-definitions.js';
 import { usageTracker } from './core/utils/usageTracker.js';
+import { isAllowedDuringHelixGrant, isHelixOperatorControlHost, refreshOperatorPolicy } from './core/helix-operator-control.js';
 import type { ToolResult } from 'brc-shared';
 
 type Args = Record<string, unknown>;
 type Handler = (args: Args) => Promise<unknown>;
 
 const TOOL_HANDLERS: Record<string, Handler> = {
+  helix_bios_deploy: (a) => handlers.handleHelixBiosDeploy(a),
   get_config: () => getConfig(),
   set_config_value: (a) => setConfigValue(a),
   get_usage_stats: () => getUsageStats(),
@@ -46,7 +48,9 @@ let cachedDefs: ToolDefinition[] | null = null;
 
 export function listTools(): ToolDefinition[] {
   if (!cachedDefs) {
-    cachedDefs = buildToolDefinitions().filter((t) => t.name in TOOL_HANDLERS && !EXCLUDED_TOOLS.has(t.name));
+    cachedDefs = buildToolDefinitions().filter((t) =>
+      t.name in TOOL_HANDLERS && !EXCLUDED_TOOLS.has(t.name) &&
+      (t.name !== 'helix_bios_deploy' || isHelixOperatorControlHost()));
   }
   return cachedDefs;
 }
@@ -61,6 +65,18 @@ export async function callTool(name: string, args: Args): Promise<ToolResult> {
     return { content: [{ type: 'text', text: `Unknown tool: ${name}` }], isError: true };
   }
   try {
+    let operatorState: Record<string, any> | null = null;
+    if (isHelixOperatorControlHost()) {
+      try {
+        operatorState = await refreshOperatorPolicy();
+      } catch {
+        // On Hadrian, inability to verify local policy closes the remote tool gate.
+        return { content: [{ type: 'text', text: 'BRC_PROMOTE policy could not be verified; remote operation denied.' }], isError: true };
+      }
+    }
+    if (operatorState?.active && !isAllowedDuringHelixGrant(name)) {
+      return { content: [{ type: 'text', text: 'BRC_PROMOTE is active: only the fixed HELIX-BIOS manifest transfer is available until off or expiry.' }], isError: true };
+    }
     const result = (await handler(args ?? {})) as ToolResult;
     if (!result.isError) void usageTracker.trackSuccess(name);
     else void usageTracker.trackFailure(name);

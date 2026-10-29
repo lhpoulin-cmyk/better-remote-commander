@@ -6,3 +6,4 @@ export * from './edit-search-handlers.js';
 export * from './search-handlers.js';
 export * from './history-handlers.js';
 export * from './transfer-handlers.js';
+export * from './helix-bios-handlers.js';
