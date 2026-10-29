@@ -5,14 +5,17 @@
     "license":  "MIT",
     "type":  "module",
     "bin":  {
-                "brc-agent":  "dist/cli.js"
+                "brc-agent":  "dist/cli.js",
+                "brc-promote":  "bin/brc-promote"
             },
     "main":  "dist/index.js",
     "files":  [
-                  "dist"
+                  "dist",
+                  "bin"
               ],
     "scripts":  {
-                    "build":  "tsc -p tsconfig.json",
+                    "build":  "tsc -p tsconfig.json \u0026\u0026 node ../../scripts/copy-helix-bios-tools.mjs",
+                    "test:helix-bios":  "python3 -m unittest discover -s test -p 'test_*.py' -v \u0026\u0026 node test/helix-bios.test.mjs",
                     "start":  "node dist/cli.js",
                     "dev":  "tsc -p tsconfig.json --watch"
                 },

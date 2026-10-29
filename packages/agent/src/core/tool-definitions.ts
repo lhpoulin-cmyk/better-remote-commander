@@ -17,6 +17,7 @@ import {
   StopSearchArgsSchema, ListSearchesArgsSchema, GetPromptsArgsSchema,
   GetRecentToolCallsArgsSchema, WritePdfArgsSchema,
 } from './tools/schemas.js';
+import { HELIX_BIOS_DEPLOY_TOOL } from './handlers/helix-bios-handlers.js';
 
 const SYSTEM_INFO = getSystemInfo();
 const OS_GUIDANCE = getOSSpecificGuidance(SYSTEM_INFO);
@@ -35,6 +36,7 @@ export const EXCLUDED_TOOLS = new Set(['give_feedback_to_desktop_commander', 'ge
 
 export function buildToolDefinitions(): ToolDefinition[] {
   const allTools: ToolDefinition[] = [
+    HELIX_BIOS_DEPLOY_TOOL,
     // Configuration tools
     {
         name: "get_config",
